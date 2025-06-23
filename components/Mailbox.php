@@ -21,51 +21,68 @@ class Mailbox extends ComponentBase
         ];
     }
 
-public function defineProperties()
-{
-    return [
-        'defaultPage' => [
-            'title'       => 'Default Page After Login',
-            'description' => 'Page to redirect to after successful login',
-            'type'        => 'dropdown',
-            'options'     => $this->getCmsPageOptions(),
-            'default'     => 'webmail/inbox',
-        ],
-        'loginPage' => [
-            'title'       => 'Login Page',
-            'description' => 'Page to redirect to for login',
-            'type'        => 'dropdown',
-            'options'     => $this->getCmsPageOptions(),
-            'default'     => 'webmail/login',
-        ],
-    ];
-}
-
-protected function getCmsPageOptions()
-{
-    $pages = \Cms\Classes\Page::listInTheme(\Cms\Classes\Theme::getActiveTheme());
-
-    $options = [];
-    foreach ($pages as $page) {
-        $options[$page->baseFileName] = $page->baseFileName;
+    public function defineProperties()
+    {
+        return [
+            'defaultPage' => [
+                'title'       => 'Default Page After Login',
+                'description' => 'Page to redirect to after successful login',
+                'type'        => 'dropdown',
+                'options'     => $this->getCmsPageOptions(),
+                'default'     => 'webmail/inbox',
+            ],
+            'loginPage' => [
+                'title'       => 'Login Page',
+                'description' => 'Page to redirect to for login',
+                'type'        => 'dropdown',
+                'options'     => $this->getCmsPageOptions(),
+                'default'     => 'webmail/login',
+            ],
+            'defaultFolder' => [
+                'title'       => 'Default Mail Folder',
+                'description' => 'Folder to load if none specified in URL',
+                'type'        => 'string',
+                'default'     => 'INBOX',
+            ],
+        ];
     }
 
-    return $options;
-}
+    protected function getCmsPageOptions()
+    {
+        $pages = Page::listInTheme(\Cms\Classes\Theme::getActiveTheme());
+        $options = [];
+        foreach ($pages as $page) {
+            $options[$page->baseFileName] = $page->baseFileName;
+        }
+        return $options;
+    }
 
     public function onRun()
     {
         $currentPage = $this->page->baseFileName;
 
-if (!$this->checkSession() && $currentPage === $this->property('defaultPage')) {
-    return Redirect::to($this->property('loginPage'));
-}
+        // Redirect if not logged in and on defaultPage
+        if (!$this->checkSession() && $currentPage === $this->property('defaultPage')) {
+            return Redirect::to($this->property('loginPage'));
+        }
 
-if ($this->checkSession() && $currentPage === $this->property('loginPage')) {
-    return Redirect::to($this->property('defaultPage'));
-}
+        // Redirect if logged in and on loginPage
+        if ($this->checkSession() && $currentPage === $this->property('loginPage')) {
+            return Redirect::to($this->property('defaultPage'));
+        }
 
-        // Always return null to allow CMS to finish loading the page
+        // Load folder from URL param or default
+        $folder = $this->param('folder') ?: $this->property('defaultFolder');
+        $this->page['folder'] = $folder;
+
+        // Load messages for the folder only if session is valid
+        if ($this->checkSession()) {
+            $this->page['messages'] = $this->loadMessages($folder);
+        } else {
+            $this->page['messages'] = [];
+        }
+
+        // Return null so CMS completes rendering
         return null;
     }
 
@@ -86,13 +103,14 @@ if ($this->checkSession() && $currentPage === $this->property('loginPage')) {
     public function onLogout()
     {
         Session::forget('webmail_identity');
+        Session::forget('webmail_password');
         Flash::success('You have been logged out.');
         return Redirect::to($this->property('loginPage'));
     }
 
     protected function checkSession()
     {
-        return Session::has('webmail_identity');
+        return Session::has('webmail_identity') && Session::has('webmail_password');
     }
 
     protected function attemptLogin($email, $password)
@@ -122,6 +140,36 @@ if ($this->checkSession() && $currentPage === $this->property('loginPage')) {
         );
 
         Session::put('webmail_identity', $identity->id);
+        Session::put('webmail_password', $password); // you may want to secure this!
+    }
+
+    protected function loadMessages($folder)
+    {
+        $identity = MailIdentity::find(Session::get('webmail_identity'));
+        if (!$identity) {
+            return [];
+        }
+
+        $settings = Settings::instance();
+
+        $client = Client::make([
+            'host'          => $settings->imap_host,
+            'port'          => $settings->imap_port,
+            'encryption'    => $settings->imap_encryption,
+            'validate_cert' => true,
+            'username'      => $identity->imap_username,
+            'password'      => Session::get('webmail_password'),
+            'protocol'      => 'imap'
+        ]);
+
+        try {
+            $client->connect();
+            $folderObj = $client->getFolder($folder);
+            return $folderObj->messages()->all()->get();
+        } catch (\Exception $e) {
+            Log::error('Failed to load messages for folder ' . $folder . ': ' . $e->getMessage());
+            return [];
+        }
     }
 
     public function getCurrentIdentity()
