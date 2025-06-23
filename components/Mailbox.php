@@ -21,20 +21,22 @@ class Mailbox extends ComponentBase
         ];
     }
 
-    public function defineProperties()
-    {
-        return [
-            'defaultPage' => [
-                'title'       => 'Default Page After Login',
-                'description' => 'Page to redirect to after successful login',
-                'type'        => 'dropdown',
-                'options'     => function () {
-                    return Page::sortBy('baseFileName')->lists('baseFileName', 'baseFileName');
-                },
-                'default'     => 'webmail/inbox',
-            ]
-        ];
-    }
+public function defineProperties()
+{
+    return [
+        'defaultPage' => [
+            'title'       => 'Default Page After Login',
+            'description' => 'Page to redirect to after successful login',
+            'type'        => 'dropdown',
+            'options'     => function () {
+                return collect(\Cms\Classes\Page::listInTheme(\Cms\Classes\Theme::getActiveTheme()))
+                    ->pluck('baseFileName', 'baseFileName')
+                    ->toArray();
+            },
+            'default'     => 'webmail/inbox',
+        ]
+    ];
+}
 
     public function onRun()
     {
