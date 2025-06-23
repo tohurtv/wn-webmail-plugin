@@ -227,6 +227,39 @@ public function onRun()
     }
 }
 
+public function onLoadFolders()
+{
+    try {
+        $identity = $this->getCurrentIdentity();
+        if (!$identity) throw new \Exception('Missing identity');
+
+        $settings = Settings::instance();
+        $client = Client::make([
+            'host'          => $settings->imap_host,
+            'port'          => $settings->imap_port,
+            'encryption'    => $settings->imap_encryption,
+            'validate_cert' => true,
+            'username'      => $identity->imap_username,
+            'password'      => Session::get('webmail_password'),
+            'protocol'      => 'imap'
+        ]);
+        $client->connect();
+
+        $folders = $client->getFolders();
+
+        return [
+            '#folder-list' => $this->renderPartial('webmail/folderList', [
+                'folders' => $folders
+            ])
+        ];
+    } catch (\Exception $e) {
+        \Log::error('Failed to load folders: ' . $e->getMessage());
+        return [
+            '#folder-list' => '<div class="alert alert-danger">Failed to load folders.</div>'
+        ];
+    }
+}
+
 public function onLoadMessagesFromFolder()
 {
     $folderName = post('folder');
