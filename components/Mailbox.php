@@ -254,7 +254,8 @@ public function onLoadMessagesFromFolder()
 
         return [
             '#message-list' => $this->renderPartial('webmail/messageList', [
-                'messages' => $messages
+                'messages' => $messages,
+                'folder'   => $folder
             ])
         ];
     } catch (\Exception $e) {
