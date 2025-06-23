@@ -2,7 +2,12 @@
     "name": "tohur/webmail-plugin",
     "type": "winter-plugin",
     "extra": {
-        "installer-name": "webmail"
+        "installer-name": "webmail",
+        "winter": {
+          "plugins": [
+            "Tohur.WebMail"
+            ]
+         }
     },
     "description": "Webmail plugin for WinterCMS",
     "homepage": "https://github.com/tohurtv/wn-webmail-plugin",
@@ -17,6 +22,7 @@
     ],
     "require": {
         "php": ">=7.2",
+        "webklex/laravel-imap": "^3.0",
         "composer/installers": "~1.11"
     },
     "minimum-stability": "dev",
