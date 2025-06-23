@@ -1,0 +1,11 @@
+<ul class="list-group">
+    {% for message in messages %}
+        <li class="list-group-item">
+            <strong>{{ message.from[0].mail }}</strong> - 
+            {{ message.subject|default('No Subject') }} 
+            <small class="text-muted float-end">{{ message.date.toDateTimeString() }}</small>
+        </li>
+    {% else %}
+        <li class="list-group-item">No messages found.</li>
+    {% endfor %}
+</ul>
