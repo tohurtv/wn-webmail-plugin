@@ -1,4 +1,4 @@
-form:
+fields:
     name: Mail Settings
     description: Configure default IMAP and SMTP settings for WebMail.
     icon: icon-envelope
