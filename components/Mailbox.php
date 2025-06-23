@@ -289,7 +289,10 @@ public function onLoadFolders()
 public function onLoadMessagesFromFolder()
 {
     $folderName = post('folder');
-\Log::info("Folder requested: " . $folderName);
+    $sortOrder = post('sort', 'desc'); // Default to 'desc' if not provided
+
+    \Log::info("Folder requested: " . $folderName . " with sort: " . $sortOrder);
+
     try {
         $identity = $this->getCurrentIdentity();
         if (!$identity) {
@@ -309,15 +312,18 @@ public function onLoadMessagesFromFolder()
         $client->connect();
 
         $folder = $client->getFolder($folderName);
-        $messages = $folder->query()->all()->limit(20)->get(); // You can paginate, etc.
+        $messages = $folder->query()->all()->limit(20)->get();
 
-        $messages = $messages->sortByDesc(function ($message) {
-    return $message->getDate();
-});
+        // Sort messages based on selected order
+        $messages = $sortOrder === 'asc'
+            ? $messages->sortBy(fn($msg) => $msg->getDate())
+            : $messages->sortByDesc(fn($msg) => $msg->getDate());
+
         return [
             '#message-list' => $this->renderPartial('webmail/messageList', [
                 'messages' => $messages,
-                'folder'   => $folder->path
+                'folder'   => $folder->path,
+                'sort'     => $sortOrder // Pass current sort to partial
             ])
         ];
     } catch (\Exception $e) {
@@ -327,6 +333,7 @@ public function onLoadMessagesFromFolder()
         ];
     }
 }
+
 
 public function onViewMessage()
 {
