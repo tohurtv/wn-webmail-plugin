@@ -1,2 +1,5 @@
 '1.0.0':
     - 'First version of webmail'
+1.0.1:
+    - Add tohur_webmail_identities table
+    - create_mail_identities_table.php

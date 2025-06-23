@@ -1,22 +1,20 @@
 <?php namespace Tohur\WebMail\Components;
 
 use Cms\Classes\ComponentBase;
-use Auth;
 use Tohur\WebMail\Classes\MailClient;
-use Tohur\WebMail\Models\Settings;
+use Tohur\Webmail\Models\MailIdentity;
+use Webklex\IMAP\Facades\Client;
 use Exception;
 
-class Mailbox extends ComponentBase
+class Inbox extends ComponentBase
 {
     public $messages;
-    public $folders;
-    public $client;
 
     public function componentDetails()
     {
         return [
-            'name'        => 'Mailbox',
-            'description' => 'Connects to IMAP and displays mailbox contents.'
+            'name'        => 'Inbox',
+            'description' => 'Displays a list of recent emails from the inbox.'
         ];
     }
 
@@ -36,37 +34,38 @@ class Mailbox extends ComponentBase
 
     public function onRun()
     {
-        $this->loadMailbox();
+        $this->login();
     }
 
-    protected function loadMailbox()
-    {
-        try {
-            $user = Auth::getUser();
+public function login($email, $password)
+{
+    // Get IMAP config from plugin Settings model
+    $settings = Settings::instance();
 
-            if (!$user) {
-                throw new Exception('User not authenticated.');
-            }
+    $client = Client::make([
+        'host' => $settings->imap_host,
+        'port' => $settings->imap_port,
+        'encryption' => $settings->imap_encryption,
+        'validate_cert' => true,
+        'username' => $email,
+        'password' => $password,
+        'protocol' => 'imap'
+    ]);
 
-            // Get settings
-            $settings = Settings::instance();
+    try {
+        $client->connect();
 
-            // Use either per-user credentials or shared fallback
-            $username = $user->email;
-            $password = $user->imap_password ?? $settings->smtp_password;
+        // Lookup or create identity
+        $identity = MailIdentity::firstOrCreate(
+            ['email' => $email],
+            ['imap_username' => $email] // Could be adjusted
+        );
 
-            $this->client = new MailClient($username, $password);
+        Session::put('webmail_identity', $identity->id);
 
-            $this->folders = $this->client->getFolders();
-            $this->messages = $this->client->getRecentMessages($this->property('limit'));
-
-            $this->page['messages'] = $this->messages;
-            $this->page['folders'] = $this->folders;
-
-        } catch (Exception $e) {
-            \Log::error('[WebMail] Mailbox load error: ' . $e->getMessage());
-            $this->messages = collect();
-            $this->folders = collect();
-        }
+        return true;
+    } catch (\Exception $e) {
+        throw new \ApplicationException('Login failed: ' . $e->getMessage());
     }
+}
 }
