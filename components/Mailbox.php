@@ -423,6 +423,69 @@ if ($html) {
     }
 }
 
+public function onDeleteMessage()
+{
+    $folderName = post('folder');
+    $uid = post('uid');
+    $sort = post('sort', 'desc'); // default to desc
+
+    try {
+        $identity = $this->getCurrentIdentity();
+        if (!$identity) {
+            throw new \Exception('Missing identity');
+        }
+
+        $settings = Settings::instance();
+        $client = Client::make([
+            'host'          => $settings->imap_host,
+            'port'          => $settings->imap_port,
+            'encryption'    => $settings->imap_encryption,
+            'validate_cert' => true,
+            'username'      => $identity->imap_username,
+            'password'      => Session::get('webmail_password'),
+            'protocol'      => 'imap'
+        ]);
+        $client->connect();
+
+        $folder = $client->getFolder($folderName);
+
+        // Find the message by UID
+        $message = $folder->getMessage($uid);
+        if (!$message) {
+            throw new \Exception('Message not found');
+        }
+
+        // Move message to Trash folder
+        $trashFolder = $client->getFolder('Trash');
+        if (!$trashFolder) {
+            throw new \Exception('Trash folder not found');
+        }
+
+        $message->move($trashFolder);
+
+        // Reload messages with current folder and sort order
+        $messages = $folder->query()->all()->limit(20)->get();
+
+        // Apply sorting
+        $messages = $sort === 'asc'
+            ? $messages->sortBy(fn($msg) => $msg->getDate())
+            : $messages->sortByDesc(fn($msg) => $msg->getDate());
+
+        return [
+            '#message-list' => $this->renderPartial('webmail/messageList', [
+                'messages' => $messages,
+                'folder'   => $folder->path,
+                'sort'     => $sort,
+                'dateFormat' => $this->getDateFormat(), // optional helper method for format string
+            ]),
+        ];
+    } catch (\Exception $e) {
+        \Log::error('Failed to delete message: ' . $e->getMessage());
+        return [
+            '#message-list' => '<div class="alert alert-danger">Failed to delete message.</div>'
+        ];
+    }
+}
 
 
 }
