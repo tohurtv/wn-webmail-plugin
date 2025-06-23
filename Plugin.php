@@ -83,4 +83,20 @@ class Plugin extends PluginBase
             ],
         ];
     }
+
+    public function registerSettings()
+{
+    return [
+        'settings' => [
+            'label'       => 'WebMail Settings',
+            'description' => 'Manage default IMAP and SMTP configuration.',
+            'category'    => 'WebMail',
+            'icon'        => 'icon-envelope',
+            'class'       => \Tohur\WebMail\Models\Settings::class,
+            'order'       => 500,
+            'keywords'    => 'email imap smtp mail',
+            'permissions' => ['tohur.webmail.manage_settings']
+        ]
+    ];
+}
 }

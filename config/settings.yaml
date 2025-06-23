@@ -1,0 +1,58 @@
+form:
+    name: Mail Settings
+    description: Configure default IMAP and SMTP settings for WebMail.
+    icon: icon-envelope
+    fields:
+        imap_host:
+            label: IMAP Host
+            type: text
+            span: left
+            default: imap.example.com
+
+        imap_port:
+            label: IMAP Port
+            type: number
+            span: right
+            default: 993
+
+        imap_encryption:
+            label: IMAP Encryption
+            type: dropdown
+            options:
+                ssl: SSL
+                tls: TLS
+                none: None
+            default: ssl
+            span: left
+
+        smtp_host:
+            label: SMTP Host
+            type: text
+            span: left
+            default: smtp.example.com
+
+        smtp_port:
+            label: SMTP Port
+            type: number
+            span: right
+            default: 587
+
+        smtp_encryption:
+            label: SMTP Encryption
+            type: dropdown
+            options:
+                ssl: SSL
+                tls: TLS
+                none: None
+            default: tls
+            span: left
+
+        smtp_username:
+            label: SMTP Username
+            type: text
+            span: left
+
+        smtp_password:
+            label: SMTP Password
+            type: password
+            span: right
