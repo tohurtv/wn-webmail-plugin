@@ -227,6 +227,14 @@ public function onRun()
     }
 }
 
+public function onLoadFolders()
+{
+    return [
+        '#sidebar-folders' => $this->renderPartial('sidebarFolders', [
+            'folders' => $this->listFolders()
+        ])
+    ];
+}
 public function onViewMessage()
 {
     $uid = post('uid');
