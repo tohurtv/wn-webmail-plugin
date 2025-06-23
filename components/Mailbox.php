@@ -230,7 +230,7 @@ public function onRun()
 public function onLoadMessagesFromFolder()
 {
     $folderName = post('folder');
-
+\Log::info("Folder requested: " . $folderName);
     try {
         $identity = $this->getCurrentIdentity();
         if (!$identity) {
