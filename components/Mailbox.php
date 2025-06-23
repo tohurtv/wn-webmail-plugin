@@ -102,6 +102,8 @@ public function onRun()
         \Flash::error("Failed to load folder: " . $folderParam);
         return Redirect::to($this->property('defaultPage'));
     }
+
+    $this->page['folders'] = $this->listFolders();
 }
 
 
