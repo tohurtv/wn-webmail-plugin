@@ -92,7 +92,7 @@ public function onRun()
 
         $client->connect();
         $folder = $client->getFolder($folderParam);
-        $messages = $folder->messages()->all()->limit(20)->get();
+        $messages = $folder->messages()->all()->limit(20)->setFetchOrder("asc")->get();
 
         // Pass to the page/partials
         $this->page['folder'] = $folderParam;
@@ -301,7 +301,7 @@ public function onLoadMessagesFromFolder()
         $client->connect();
 
         $folder = $client->getFolder($folderName);
-        $messages = $folder->query()->all()->limit(20)->setFetchOrder("desc")->get(); // You can paginate, etc.
+        $messages = $folder->query()->all()->limit(20)->setFetchOrder("asc")->get(); // You can paginate, etc.
 
         return [
             '#message-list' => $this->renderPartial('webmail/messageList', [
