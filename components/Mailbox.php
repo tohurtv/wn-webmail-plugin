@@ -102,8 +102,6 @@ public function onRun()
         \Flash::error("Failed to load folder: " . $folderParam);
         return Redirect::to($this->property('defaultPage'));
     }
-
-    $this->page['folders'] = $this->listFolders();
 }
 
 
@@ -227,61 +225,12 @@ public function onRun()
     }
 }
 
-public function onLoadFolders()
-{
-    return [
-        '#sidebar-folders' => $this->renderPartial('sidebarFolders', [
-            'folders' => $this->listFolders()
-        ])
-    ];
-}
-
-public function onLoadFolder()
-{
-    $folderParam = post('folder');
-
-    try {
-        $identity = $this->getCurrentIdentity();
-        if (!$identity) {
-            throw new ApplicationException("Session expired. Please log in again.");
-        }
-
-        $settings = Settings::instance();
-
-        $client = Client::make([
-            'host'          => $settings->imap_host,
-            'port'          => $settings->imap_port,
-            'encryption'    => $settings->imap_encryption,
-            'validate_cert' => true,
-            'username'      => $identity->imap_username,
-            'password'      => Session::get('webmail_password'),
-            'protocol'      => 'imap'
-        ]);
-
-        $client->connect();
-        $folder = $client->getFolder($folderParam);
-        $messages = $folder->messages()->all()->limit(20)->get();
-
-        return [
-            '#message-list' => $this->renderPartial('webmail/messageList', [
-                'folder' => $folderParam,
-                'messages' => $messages
-            ])
-        ];
-    } catch (\Exception $e) {
-        \Log::error("AJAX folder load failed: " . $e->getMessage());
-        Flash::error("Failed to load folder.");
-        return ['#message-list' => '<p class="text-danger">Could not load folder.</p>'];
-    }
-}
-
 public function onViewMessage()
 {
     $uid = post('uid');
     $folderName = post('folder');
 
     \Log::info('Loading message UID: ' . $uid . ' from folder: ' . $folderName);
-
     try {
         $identity = $this->getCurrentIdentity();
         if (!$identity) throw new ApplicationException("Session invalid.");
@@ -304,48 +253,22 @@ public function onViewMessage()
             throw new ApplicationException("Folder '{$folderName}' not found.");
         }
 
-        $messages = $folder->messages()->uid($uid)->get();
-        if ($messages->isEmpty()) {
-            throw new ApplicationException("Message with UID {$uid} not found in folder {$folderName}");
-        }
+        $message = $folder->messages()->uid($uid)->first();
 
-        $message = $messages->first();
-
-        // Clean up and isolate the <body> content
-        $html = $message->getHTMLBody();
-        $bodyContent = '';
-
-        if ($html) {
-            libxml_use_internal_errors(true);
-            $doc = new \DOMDocument();
-            $doc->loadHTML($html);
-            libxml_clear_errors();
-
-            $bodyTags = $doc->getElementsByTagName('body');
-            if ($bodyTags->length > 0) {
-                foreach ($bodyTags->item(0)->childNodes as $child) {
-                    $bodyContent .= $doc->saveHTML($child);
-                }
-            } else {
-                $bodyContent = $html; // fallback
-            }
-        } else {
-            $bodyContent = nl2br(e($message->getTextBody()));
+        if (!$message) {
+            throw new ApplicationException("Message with UID {$uid} not found in folder {$folderName}.");
         }
 
         return [
             '#message-view' => $this->renderPartial('webmail/messageView', [
-                'message' => $message,
-                'htmlBody' => $bodyContent
+                'message' => $message
             ])
         ];
     } catch (\Exception $e) {
-        \Log::error('ViewMessage failed: ' . $e->getMessage());
         Flash::error('Failed to load message: ' . $e->getMessage());
         return ['#message-view' => '<p class="text-danger">Could not load message.</p>'];
     }
 }
-
 
 
 }
