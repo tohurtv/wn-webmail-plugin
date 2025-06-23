@@ -235,6 +235,46 @@ public function onLoadFolders()
         ])
     ];
 }
+
+public function onLoadFolder()
+{
+    $folderParam = post('folder');
+
+    try {
+        $identity = $this->getCurrentIdentity();
+        if (!$identity) {
+            throw new ApplicationException("Session expired. Please log in again.");
+        }
+
+        $settings = Settings::instance();
+
+        $client = Client::make([
+            'host'          => $settings->imap_host,
+            'port'          => $settings->imap_port,
+            'encryption'    => $settings->imap_encryption,
+            'validate_cert' => true,
+            'username'      => $identity->imap_username,
+            'password'      => Session::get('webmail_password'),
+            'protocol'      => 'imap'
+        ]);
+
+        $client->connect();
+        $folder = $client->getFolder($folderParam);
+        $messages = $folder->messages()->all()->limit(20)->get();
+
+        return [
+            '#message-list' => $this->renderPartial('webmail/messageList', [
+                'folder' => $folderParam,
+                'messages' => $messages
+            ])
+        ];
+    } catch (\Exception $e) {
+        \Log::error("AJAX folder load failed: " . $e->getMessage());
+        Flash::error("Failed to load folder.");
+        return ['#message-list' => '<p class="text-danger">Could not load folder.</p>'];
+    }
+}
+
 public function onViewMessage()
 {
     $uid = post('uid');
