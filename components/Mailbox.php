@@ -230,6 +230,8 @@ public function onViewMessage()
     $uid = post('uid');
     $folderName = post('folder');
 
+    \Log::info('Loading message UID: ' . $uid . ' from folder: ' . $folderName);
+    
     try {
         $identity = $this->getCurrentIdentity();
         if (!$identity) throw new ApplicationException("Session invalid.");
