@@ -227,6 +227,44 @@ public function onRun()
     }
 }
 
+public function onLoadMessagesFromFolder()
+{
+    $folderName = post('folder');
+
+    try {
+        $identity = $this->getCurrentIdentity();
+        if (!$identity) {
+            throw new \Exception('Missing identity');
+        }
+
+        $settings = Settings::instance();
+        $client = Client::make([
+            'host'          => $settings->imap_host,
+            'port'          => $settings->imap_port,
+            'encryption'    => $settings->imap_encryption,
+            'validate_cert' => true,
+            'username'      => $identity->imap_username,
+            'password'      => Session::get('webmail_password'),
+            'protocol'      => 'imap'
+        ]);
+        $client->connect();
+
+        $folder = $client->getFolder($folderName);
+        $messages = $folder->query()->limit(20)->get(); // You can paginate, etc.
+
+        return [
+            '#message-list' => $this->renderPartial('webmail/messageList', [
+                'messages' => $messages
+            ])
+        ];
+    } catch (\Exception $e) {
+        \Log::error('Failed to load messages: ' . $e->getMessage());
+        return [
+            '#message-list' => '<div class="alert alert-danger">Failed to load messages.</div>'
+        ];
+    }
+}
+
 public function onViewMessage()
 {
     $uid = post('uid');
