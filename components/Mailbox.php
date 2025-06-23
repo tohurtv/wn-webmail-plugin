@@ -102,6 +102,8 @@ public function onRun()
         \Flash::error("Failed to load folder: " . $folderParam);
         return Redirect::to($this->property('defaultPage'));
     }
+
+    $this->page['folders'] = $this->listFolders();
 }
 
 
@@ -231,6 +233,7 @@ public function onViewMessage()
     $folderName = post('folder');
 
     \Log::info('Loading message UID: ' . $uid . ' from folder: ' . $folderName);
+
     try {
         $identity = $this->getCurrentIdentity();
         if (!$identity) throw new ApplicationException("Session invalid.");
@@ -253,22 +256,48 @@ public function onViewMessage()
             throw new ApplicationException("Folder '{$folderName}' not found.");
         }
 
-        $message = $folder->messages()->uid($uid)->first();
+        $messages = $folder->messages()->uid($uid)->get();
+        if ($messages->isEmpty()) {
+            throw new ApplicationException("Message with UID {$uid} not found in folder {$folderName}");
+        }
 
-        if (!$message) {
-            throw new ApplicationException("Message with UID {$uid} not found in folder {$folderName}.");
+        $message = $messages->first();
+
+        // Clean up and isolate the <body> content
+        $html = $message->getHTMLBody();
+        $bodyContent = '';
+
+        if ($html) {
+            libxml_use_internal_errors(true);
+            $doc = new \DOMDocument();
+            $doc->loadHTML($html);
+            libxml_clear_errors();
+
+            $bodyTags = $doc->getElementsByTagName('body');
+            if ($bodyTags->length > 0) {
+                foreach ($bodyTags->item(0)->childNodes as $child) {
+                    $bodyContent .= $doc->saveHTML($child);
+                }
+            } else {
+                $bodyContent = $html; // fallback
+            }
+        } else {
+            $bodyContent = nl2br(e($message->getTextBody()));
         }
 
         return [
             '#message-view' => $this->renderPartial('webmail/messageView', [
-                'message' => $message
+                'message' => $message,
+                'htmlBody' => $bodyContent
             ])
         ];
     } catch (\Exception $e) {
+        \Log::error('ViewMessage failed: ' . $e->getMessage());
         Flash::error('Failed to load message: ' . $e->getMessage());
         return ['#message-view' => '<p class="text-danger">Could not load message.</p>'];
     }
 }
+
 
 
 }
