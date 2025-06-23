@@ -19,4 +19,9 @@ class MailIdentity extends Model
     protected $casts = [
         'is_default' => 'boolean',
     ];
+
+    public function scopeDefault($query)
+{
+    return $query->where('is_default', true);
+}
 }

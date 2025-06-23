@@ -9,6 +9,7 @@ use Session;
 use Flash;
 use Redirect;
 use ApplicationException;
+use Log;
 
 class Mailbox extends ComponentBase
 {
@@ -46,6 +47,9 @@ class Mailbox extends ComponentBase
         if ($this->checkSession() && $currentPage === 'login') {
             return Redirect::to($this->property('defaultPage'));
         }
+
+        // Always return null to allow CMS to finish loading the page
+        return null;
     }
 
     public function onLogin()
@@ -58,6 +62,7 @@ class Mailbox extends ComponentBase
             return Redirect::to($this->property('defaultPage'));
         } catch (\Exception $ex) {
             Flash::error('Login failed: ' . $ex->getMessage());
+            return Redirect::back();
         }
     }
 
@@ -87,7 +92,12 @@ class Mailbox extends ComponentBase
             'protocol'      => 'imap'
         ]);
 
-        $client->connect();
+        try {
+            $client->connect();
+        } catch (\Exception $e) {
+            Log::error('Webmail login failed: ' . $e->getMessage());
+            throw new ApplicationException("IMAP connection failed: " . $e->getMessage());
+        }
 
         $identity = MailIdentity::firstOrCreate(
             ['email' => $email],
@@ -95,5 +105,14 @@ class Mailbox extends ComponentBase
         );
 
         Session::put('webmail_identity', $identity->id);
+    }
+
+    public function getCurrentIdentity()
+    {
+        if (!$this->checkSession()) {
+            return null;
+        }
+
+        return MailIdentity::find(Session::get('webmail_identity'));
     }
 }
