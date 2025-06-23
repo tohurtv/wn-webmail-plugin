@@ -57,34 +57,53 @@ class Mailbox extends ComponentBase
         return $options;
     }
 
-    public function onRun()
-    {
-        $currentPage = $this->page->baseFileName;
+public function onRun()
+{
+    $currentPage = $this->page->baseFileName;
 
-        // Redirect if not logged in and on defaultPage
-        if (!$this->checkSession() && $currentPage === $this->property('defaultPage')) {
+    if (!$this->checkSession() && $currentPage === $this->property('defaultPage')) {
+        return Redirect::to($this->property('loginPage'));
+    }
+
+    if ($this->checkSession() && $currentPage === $this->property('loginPage')) {
+        return Redirect::to($this->property('defaultPage'));
+    }
+
+    // New logic for /mailbox/:folder?
+    $folderParam = $this->param('folder') ?? 'INBOX';
+
+    try {
+        $identity = $this->getCurrentIdentity();
+        if (!$identity) {
             return Redirect::to($this->property('loginPage'));
         }
 
-        // Redirect if logged in and on loginPage
-        if ($this->checkSession() && $currentPage === $this->property('loginPage')) {
-            return Redirect::to($this->property('defaultPage'));
-        }
+        $settings = Settings::instance();
 
-        // Load folder from URL param or default
-        $folder = $this->param('folder') ?: $this->property('defaultFolder');
-        $this->page['folder'] = $folder;
+        $client = Client::make([
+            'host'          => $settings->imap_host,
+            'port'          => $settings->imap_port,
+            'encryption'    => $settings->imap_encryption,
+            'validate_cert' => true,
+            'username'      => $identity->imap_username,
+            'password'      => Session::get('webmail_password'),
+            'protocol'      => 'imap'
+        ]);
 
-        // Load messages for the folder only if session is valid
-        if ($this->checkSession()) {
-            $this->page['messages'] = $this->loadMessages($folder);
-        } else {
-            $this->page['messages'] = [];
-        }
+        $client->connect();
+        $folder = $client->getFolder($folderParam);
+        $messages = $folder->messages()->all()->limit(20)->get();
 
-        // Return null so CMS completes rendering
-        return null;
+        // Pass to the page/partials
+        $this->page['folder'] = $folderParam;
+        $this->page['messages'] = $messages;
+    } catch (\Exception $e) {
+        \Log::error("Error loading mailbox folder: " . $e->getMessage());
+        \Flash::error("Failed to load folder: " . $folderParam);
+        return Redirect::to($this->property('defaultPage'));
     }
+}
+
 
     public function onLogin()
     {
