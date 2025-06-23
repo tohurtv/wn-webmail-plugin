@@ -354,26 +354,35 @@ public function onViewMessage()
         $message = $messages->first();
 
         // Clean up and isolate the <body> content
-        $html = $message->getHTMLBody();
-        $bodyContent = '';
+$html = $message->getHTMLBody();
+$bodyContent = '';
 
-        if ($html) {
-            libxml_use_internal_errors(true);
-            $doc = new \DOMDocument();
-            $doc->loadHTML($html);
-            libxml_clear_errors();
+if ($html) {
+    libxml_use_internal_errors(true);
 
-            $bodyTags = $doc->getElementsByTagName('body');
-            if ($bodyTags->length > 0) {
-                foreach ($bodyTags->item(0)->childNodes as $child) {
-                    $bodyContent .= $doc->saveHTML($child);
-                }
-            } else {
-                $bodyContent = $html; // fallback
-            }
-        } else {
-            $bodyContent = nl2br(e($message->getTextBody()));
+    $doc = new \DOMDocument();
+    $utf8html = mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8');
+    $doc->loadHTML($utf8html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+    // Remove typical email header blocks
+    $xpath = new \DOMXPath($doc);
+    $nodesToRemove = [];
+    foreach ($xpath->query('//div|//table|//p|//span') as $node) {
+        $text = trim($node->textContent);
+        if (preg_match('/^(From|Sent|To|Subject|Date):/i', $text)) {
+            $nodesToRemove[] = $node;
         }
+    }
+    foreach ($nodesToRemove as $node) {
+        $node->parentNode->removeChild($node);
+    }
+
+    $bodyContent = $doc->saveHTML();
+
+    libxml_clear_errors();
+} else {
+    $bodyContent = nl2br(e($message->getTextBody()));
+}
 
         return [
             '#message-view' => $this->renderPartial('webmail/messageView', [
