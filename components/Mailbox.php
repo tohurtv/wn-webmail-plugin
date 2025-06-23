@@ -92,8 +92,11 @@ public function onRun()
 
         $client->connect();
         $folder = $client->getFolder($folderParam);
-        $messages = $folder->messages()->all()->setFetchOrder("desc")->limit(20)->get();
-
+        $messages = $folder->messages()->all()->setFetchOrder("asc")->limit(20)->get();
+        
+        $messages = $messages->sortByDesc(function ($message) {
+    return $message->getDate();
+});
         // Pass to the page/partials
         $this->page['folder'] = $folderParam;
         $this->page['messages'] = $messages;
@@ -186,7 +189,12 @@ public function onRun()
         try {
             $client->connect();
             $folderObj = $client->getFolder($folder);
-            return $folderObj->messages()->all()->setFetchOrder("desc")->get();
+            $messages->messages()->all()->get();
+            
+            $messages = $messages->sortByDesc(function ($message) {
+    return $message->getDate();
+});
+            return $messages->messages()->all()->get();
         } catch (\Exception $e) {
             Log::error('Failed to load messages for folder ' . $folder . ': ' . $e->getMessage());
             return [];
@@ -301,8 +309,11 @@ public function onLoadMessagesFromFolder()
         $client->connect();
 
         $folder = $client->getFolder($folderName);
-        $messages = $folder->query()->all()->setFetchOrder("desc")->limit(20)->get(); // You can paginate, etc.
+        $messages = $folder->query()->all()->limit(20)->get(); // You can paginate, etc.
 
+        $messages = $messages->sortByDesc(function ($message) {
+    return $message->getDate();
+});
         return [
             '#message-list' => $this->renderPartial('webmail/messageList', [
                 'messages' => $messages,
