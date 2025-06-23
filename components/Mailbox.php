@@ -1,118 +1,71 @@
 <?php namespace Tohur\WebMail\Components;
 
 use Cms\Classes\ComponentBase;
-use Cms\Classes\Page;
-use Tohur\WebMail\Models\Settings;
-use Tohur\WebMail\Models\MailIdentity;
+use Tohur\WebMail\Classes\MailClient;
+use Tohur\Webmail\Models\MailIdentity;
 use Webklex\IMAP\Facades\Client;
-use Session;
-use Flash;
-use Redirect;
-use ApplicationException;
-use Log;
+use Exception;
 
-class Mailbox extends ComponentBase
+class Inbox extends ComponentBase
 {
+    public $messages;
+
     public function componentDetails()
     {
         return [
-            'name'        => 'Mailbox',
-            'description' => 'Handles login, session, and routing for Webmail'
+            'name'        => 'Inbox',
+            'description' => 'Displays a list of recent emails from the inbox.'
         ];
     }
 
     public function defineProperties()
     {
         return [
-            'defaultPage' => [
-                'title'       => 'Default Page After Login',
-                'description' => 'Page to redirect to after successful login',
-                'type'        => 'dropdown',
-                'options'     => function () {
-                    return Page::sortBy('baseFileName')->lists('baseFileName', 'baseFileName');
-                },
-                'default'     => 'webmail/inbox',
+            'limit' => [
+                'title'             => 'Message Limit',
+                'description'       => 'Number of messages to show',
+                'default'           => 10,
+                'type'              => 'string',
+                'validationPattern' => '^\d+$',
+                'validationMessage' => 'The message limit must be a number.'
             ]
         ];
     }
 
     public function onRun()
     {
-        $currentPage = $this->page->baseFileName;
-
-        if (!$this->checkSession() && $currentPage !== 'login') {
-            return Redirect::to('webmail/login');
-        }
-
-        if ($this->checkSession() && $currentPage === 'login') {
-            return Redirect::to($this->property('defaultPage'));
-        }
-
-        // Always return null to allow CMS to finish loading the page
-        return null;
+        $this->login();
     }
 
-    public function onLogin()
-    {
-        $email = post('email');
-        $password = post('password');
+public function login($email, $password)
+{
+    // Get IMAP config from plugin Settings model
+    $settings = Settings::instance();
 
-        try {
-            $this->attemptLogin($email, $password);
-            return Redirect::to($this->property('defaultPage'));
-        } catch (\Exception $ex) {
-            Flash::error('Login failed: ' . $ex->getMessage());
-            return Redirect::back();
-        }
-    }
+    $client = Client::make([
+        'host' => $settings->imap_host,
+        'port' => $settings->imap_port,
+        'encryption' => $settings->imap_encryption,
+        'validate_cert' => true,
+        'username' => $email,
+        'password' => $password,
+        'protocol' => 'imap'
+    ]);
 
-    public function onLogout()
-    {
-        Session::forget('webmail_identity');
-        Flash::success('You have been logged out.');
-        return Redirect::to('webmail/login');
-    }
+    try {
+        $client->connect();
 
-    protected function checkSession()
-    {
-        return Session::has('webmail_identity');
-    }
-
-    protected function attemptLogin($email, $password)
-    {
-        $settings = Settings::instance();
-
-        $client = Client::make([
-            'host'          => $settings->imap_host,
-            'port'          => $settings->imap_port,
-            'encryption'    => $settings->imap_encryption,
-            'validate_cert' => true,
-            'username'      => $email,
-            'password'      => $password,
-            'protocol'      => 'imap'
-        ]);
-
-        try {
-            $client->connect();
-        } catch (\Exception $e) {
-            Log::error('Webmail login failed: ' . $e->getMessage());
-            throw new ApplicationException("IMAP connection failed: " . $e->getMessage());
-        }
-
+        // Lookup or create identity
         $identity = MailIdentity::firstOrCreate(
             ['email' => $email],
-            ['imap_username' => $email]
+            ['imap_username' => $email] // Could be adjusted
         );
 
         Session::put('webmail_identity', $identity->id);
-    }
 
-    public function getCurrentIdentity()
-    {
-        if (!$this->checkSession()) {
-            return null;
-        }
-
-        return MailIdentity::find(Session::get('webmail_identity'));
+        return true;
+    } catch (\Exception $e) {
+        throw new \ApplicationException('Login failed: ' . $e->getMessage());
     }
+}
 }
