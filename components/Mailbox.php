@@ -180,4 +180,64 @@ class Mailbox extends ComponentBase
 
         return MailIdentity::find(Session::get('webmail_identity'));
     }
+
+    public function listFolders()
+{
+    try {
+        $identity = $this->getCurrentIdentity();
+        if (!$identity) return [];
+
+        $settings = Settings::instance();
+        $client = Client::make([
+            'host'          => $settings->imap_host,
+            'port'          => $settings->imap_port,
+            'encryption'    => $settings->imap_encryption,
+            'validate_cert' => true,
+            'username'      => $identity->imap_username,
+            'password'      => Session::get('webmail_password'),
+            'protocol'      => 'imap'
+        ]);
+        $client->connect();
+
+        return $client->getFolders();
+    } catch (\Exception $e) {
+        \Log::error('Failed to list IMAP folders: ' . $e->getMessage());
+        return [];
+    }
+}
+
+public function onViewMessage()
+{
+    $uid = post('uid');
+    $folder = post('folder');
+
+    try {
+        $identity = $this->getCurrentIdentity();
+        if (!$identity) throw new ApplicationException("Session invalid.");
+
+        $settings = Settings::instance();
+        $client = Client::make([
+            'host'          => $settings->imap_host,
+            'port'          => $settings->imap_port,
+            'encryption'    => $settings->imap_encryption,
+            'validate_cert' => true,
+            'username'      => $identity->imap_username,
+            'password'      => Session::get('webmail_password'),
+            'protocol'      => 'imap'
+        ]);
+        $client->connect();
+
+        $folderObj = $client->getFolder($folder);
+        $message = $folderObj->getMessage($uid);
+
+        return [
+            '#message-view' => $this->renderPartial('webmail/messageView', [
+                'message' => $message
+            ])
+        ];
+    } catch (\Exception $e) {
+        Flash::error('Failed to load message: ' . $e->getMessage());
+        return ['#message-view' => '<p class="text-danger">Could not load message.</p>'];
+    }
+}
 }
