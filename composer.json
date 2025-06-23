@@ -1,0 +1,33 @@
+{
+    "name": "tohur/webmail-plugin",
+    "type": "winter-plugin",
+    "extra": {
+        "installer-name": "webmail"
+    },
+    "description": "Webmail plugin for WinterCMS",
+    "homepage": "https://github.com/tohurtv/wn-webmail-plugin",
+    "keywords": ["cms", "wintercms", "webmail"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Joshua Webb",
+            "email": "tohur@tohur.xyz",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=7.2",
+        "composer/installers": "~1.11"
+    },
+    "minimum-stability": "dev",
+    "scripts": {
+        "build": [
+            "@composer install --no-progress --no-interaction --no-suggest",
+            "@test"
+        ],
+        "test": [
+            "composer dumpautoload",
+            "phpunit"
+        ]
+    }
+}

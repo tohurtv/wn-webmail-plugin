@@ -1,0 +1,5 @@
+plugin:
+    name: 'tohur.webmail::lang.plugin.name'
+    description: 'tohur.webmail::lang.plugin.description'
+    author: Tohur
+    replaces: {  }
