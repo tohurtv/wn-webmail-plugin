@@ -30,7 +30,14 @@ public function defineProperties()
             'type'        => 'dropdown',
             'options'     => $this->getCmsPageOptions(),
             'default'     => 'webmail/inbox',
-        ]
+        ],
+        'loginPage' => [
+            'title'       => 'Login Page',
+            'description' => 'Page to redirect to for login',
+            'type'        => 'dropdown',
+            'options'     => $this->getCmsPageOptions(),
+            'default'     => 'webmail/login',
+        ],
     ];
 }
 
@@ -50,13 +57,13 @@ protected function getCmsPageOptions()
     {
         $currentPage = $this->page->baseFileName;
 
-        if (!$this->checkSession() && $currentPage !== 'login') {
-            return Redirect::to('webmail/login');
-        }
+if (!$this->checkSession() && $currentPage === $this->property('defaultPage')) {
+    return Redirect::to($this->property('loginPage'));
+}
 
-        if ($this->checkSession() && $currentPage === 'login') {
-            return Redirect::to($this->property('defaultPage'));
-        }
+if ($this->checkSession() && $currentPage === $this->property('loginPage')) {
+    return Redirect::to($this->property('defaultPage'));
+}
 
         // Always return null to allow CMS to finish loading the page
         return null;
@@ -80,7 +87,7 @@ protected function getCmsPageOptions()
     {
         Session::forget('webmail_identity');
         Flash::success('You have been logged out.');
-        return Redirect::to('webmail/login');
+        return Redirect::to($this->property('loginPage'));
     }
 
     protected function checkSession()
