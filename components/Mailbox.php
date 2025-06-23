@@ -230,6 +230,8 @@ public function onViewMessage()
     $uid = post('uid');
     $folderName = post('folder');
 
+    \Log::info('Loading message UID: ' . $uid . ' from folder: ' . $folderName);
+
     try {
         $identity = $this->getCurrentIdentity();
         if (!$identity) throw new ApplicationException("Session invalid.");
@@ -244,16 +246,22 @@ public function onViewMessage()
             'password'      => Session::get('webmail_password'),
             'protocol'      => 'imap'
         ]);
+
         $client->connect();
 
         $folder = $client->getFolder($folderName);
-        $message = $folder->messages()->uid($uid)->first();
-
-        if (!$message) {
-            throw new ApplicationException("Message not found.");
+        if (!$folder) {
+            throw new ApplicationException("Folder '{$folderName}' not found.");
         }
 
-        // Clean and extract <body> content
+        $messages = $folder->messages()->uid($uid)->get();
+        if ($messages->isEmpty()) {
+            throw new ApplicationException("Message with UID {$uid} not found in folder {$folderName}");
+        }
+
+        $message = $messages->first();
+
+        // Clean up and isolate the <body> content
         $html = $message->getHTMLBody();
         $bodyContent = '';
 
@@ -269,11 +277,9 @@ public function onViewMessage()
                     $bodyContent .= $doc->saveHTML($child);
                 }
             } else {
-                // fallback to whole HTML if no <body> found
-                $bodyContent = $html;
+                $bodyContent = $html; // fallback
             }
         } else {
-            // fallback to text body
             $bodyContent = nl2br(e($message->getTextBody()));
         }
 
@@ -284,6 +290,7 @@ public function onViewMessage()
             ])
         ];
     } catch (\Exception $e) {
+        \Log::error('ViewMessage failed: ' . $e->getMessage());
         Flash::error('Failed to load message: ' . $e->getMessage());
         return ['#message-view' => '<p class="text-danger">Could not load message.</p>'];
     }
