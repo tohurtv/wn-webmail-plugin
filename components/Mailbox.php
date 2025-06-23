@@ -355,26 +355,33 @@ public function onViewMessage()
 
         // Clean up and isolate the <body> content
 $html = $message->getHTMLBody();
-$bodyContent = '';
 
 if ($html) {
+    // Remove raw email headers that appear at the start of the HTML body
+    // Email headers usually look like: Key: Value\r\n and end before the actual HTML content starts
+
+    // This regex tries to remove everything from the start up to the first <html> or <body> tag
+    // or alternatively up to the first <!DOCTYPE> or a double line break (empty line)
+    $html = preg_replace(
+        '#^(.*?)((<html\b)|(<!DOCTYPE\b)|(<body\b))#is',
+        '$2',
+        $html,
+        1
+    );
+
+    // Now $html should start with the actual HTML content, no raw headers
+
     libxml_use_internal_errors(true);
 
     $doc = new \DOMDocument();
     $utf8html = mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8');
     $doc->loadHTML($utf8html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
 
-    // Remove typical email header blocks
-    $xpath = new \DOMXPath($doc);
-    $nodesToRemove = [];
-    foreach ($xpath->query('//div|//table|//p|//span') as $node) {
-        $text = trim($node->textContent);
-        if (preg_match('/^(From|Sent|To|Subject|Date):/i', $text)) {
-            $nodesToRemove[] = $node;
-        }
-    }
-    foreach ($nodesToRemove as $node) {
-        $node->parentNode->removeChild($node);
+    // Remove <head> to avoid showing styles inside iframe
+    $headTags = $doc->getElementsByTagName('head');
+    if ($headTags->length > 0) {
+        $headNode = $headTags->item(0);
+        $headNode->parentNode->removeChild($headNode);
     }
 
     $bodyContent = $doc->saveHTML();
@@ -383,6 +390,7 @@ if ($html) {
 } else {
     $bodyContent = nl2br(e($message->getTextBody()));
 }
+
 
         return [
             '#message-view' => $this->renderPartial('webmail/messageView', [
