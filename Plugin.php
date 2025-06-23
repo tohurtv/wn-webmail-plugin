@@ -45,11 +45,9 @@ class Plugin extends PluginBase
      */
     public function registerComponents(): array
     {
-        return []; // Remove this line to activate
-
         return [
-            \Tohur\Webmail\Components\MyComponent::class => 'myComponent',
-        ];
+        \Tohur\WebMail\Components\Inbox::class => 'webMailInbox'
+    ];
     }
 
     /**
