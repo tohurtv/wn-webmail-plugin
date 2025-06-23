@@ -6,7 +6,7 @@ use Tohur\Webmail\Models\MailIdentity;
 use Webklex\IMAP\Facades\Client;
 use Exception;
 
-class Inbox extends ComponentBase
+class Mailbox extends ComponentBase
 {
     public $messages;
 
