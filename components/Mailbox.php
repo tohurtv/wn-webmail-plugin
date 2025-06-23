@@ -202,7 +202,7 @@ public function onRun()
         return MailIdentity::find(Session::get('webmail_identity'));
     }
 
-    public function listFolders()
+public function listFolders()
 {
     try {
         $identity = $this->getCurrentIdentity();
@@ -220,7 +220,17 @@ public function onRun()
         ]);
         $client->connect();
 
-        return $client->getFolders();
+        $priorityOrder = [
+            'INBOX', 'STARRED', 'IMPORTANT', 'SENT', 'DRAFTS', 'ARCHIVE', 'SPAM', 'JUNK', 'TRASH',
+        ];
+
+        $folders = collect($client->getFolders());
+
+        return $folders->sortBy(function ($folder) use ($priorityOrder) {
+            $name = strtoupper($folder->name);
+            $index = array_search($name, $priorityOrder);
+            return $index !== false ? $index : count($priorityOrder) + ord($name[0]);
+        });
     } catch (\Exception $e) {
         \Log::error('Failed to list IMAP folders: ' . $e->getMessage());
         return [];
@@ -245,7 +255,15 @@ public function onLoadFolders()
         ]);
         $client->connect();
 
-        $folders = $client->getFolders();
+        $priorityOrder = [
+            'INBOX', 'STARRED', 'IMPORTANT', 'SENT', 'DRAFTS', 'ARCHIVE', 'SPAM', 'JUNK', 'TRASH',
+        ];
+
+        $folders = collect($client->getFolders())->sortBy(function ($folder) use ($priorityOrder) {
+            $name = strtoupper($folder->name);
+            $index = array_search($name, $priorityOrder);
+            return $index !== false ? $index : count($priorityOrder) + ord($name[0]);
+        });
 
         return [
             '#folder-list' => $this->renderPartial('webmail/folderList', [
