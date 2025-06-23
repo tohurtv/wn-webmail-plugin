@@ -1,6 +1,7 @@
 <?php namespace Tohur\WebMail\Classes;
 
 use Webklex\IMAP\ClientManager;
+use Tohur\WebMail\Models\Settings;
 use Exception;
 
 class MailClient
@@ -11,15 +12,17 @@ class MailClient
     {
         $cm = new ClientManager();
 
-        $this->client = $cm->make([
-            'host'          => 'imap.example.com',
-            'port'          => 993,
-            'encryption'    => 'ssl',
-            'validate_cert' => true,
-            'username'      => $username,
-            'password'      => $password,
-            'protocol'      => 'imap'
-        ]);
+        $settings = Settings::instance();
+
+$client = $cm->make([
+    'host'          => $settings->imap_host,
+    'port'          => $settings->imap_port,
+    'encryption'    => $settings->imap_encryption,
+    'validate_cert' => true,
+    'username'      => $username,
+    'password'      => $password,
+    'protocol'      => 'imap'
+]);
 
         try {
             $this->client->connect();
