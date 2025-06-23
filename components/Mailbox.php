@@ -230,8 +230,6 @@ public function onViewMessage()
     $uid = post('uid');
     $folderName = post('folder');
 
-    \Log::info('Loading message UID: ' . $uid . ' from folder: ' . $folderName);
-
     try {
         $identity = $this->getCurrentIdentity();
         if (!$identity) throw new ApplicationException("Session invalid.");
@@ -246,25 +244,43 @@ public function onViewMessage()
             'password'      => Session::get('webmail_password'),
             'protocol'      => 'imap'
         ]);
-
         $client->connect();
 
         $folder = $client->getFolder($folderName);
-        if (!$folder) {
-            throw new ApplicationException("Folder '{$folderName}' not found.");
+        $message = $folder->messages()->uid($uid)->first();
+
+        if (!$message) {
+            throw new ApplicationException("Message not found.");
         }
 
-        $messages = $folder->messages()->uid($uid)->get();
+        // Clean and extract <body> content
+        $html = $message->getHTMLBody();
+        $bodyContent = '';
 
-if ($messages->isEmpty()) {
-    throw new ApplicationException("Message with UID {$uid} not found in folder {$folderName}");
-}
+        if ($html) {
+            libxml_use_internal_errors(true);
+            $doc = new \DOMDocument();
+            $doc->loadHTML($html);
+            libxml_clear_errors();
 
-$message = $messages->first();
+            $bodyTags = $doc->getElementsByTagName('body');
+            if ($bodyTags->length > 0) {
+                foreach ($bodyTags->item(0)->childNodes as $child) {
+                    $bodyContent .= $doc->saveHTML($child);
+                }
+            } else {
+                // fallback to whole HTML if no <body> found
+                $bodyContent = $html;
+            }
+        } else {
+            // fallback to text body
+            $bodyContent = nl2br(e($message->getTextBody()));
+        }
 
         return [
             '#message-view' => $this->renderPartial('webmail/messageView', [
-                'message' => $message
+                'message' => $message,
+                'htmlBody' => $bodyContent
             ])
         ];
     } catch (\Exception $e) {
@@ -272,6 +288,7 @@ $message = $messages->first();
         return ['#message-view' => '<p class="text-danger">Could not load message.</p>'];
     }
 }
+
 
 
 }
