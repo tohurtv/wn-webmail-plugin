@@ -244,15 +244,18 @@ public function onViewMessage()
             'password'      => Session::get('webmail_password'),
             'protocol'      => 'imap'
         ]);
+
         $client->connect();
 
         $folder = $client->getFolder($folderName);
+        if (!$folder) {
+            throw new ApplicationException("Folder '{$folderName}' not found.");
+        }
 
-        // Correct way to get a single message by UID
         $message = $folder->messages()->uid($uid)->first();
 
         if (!$message) {
-            throw new ApplicationException("Message not found.");
+            throw new ApplicationException("Message with UID {$uid} not found in folder {$folderName}.");
         }
 
         return [
@@ -265,5 +268,6 @@ public function onViewMessage()
         return ['#message-view' => '<p class="text-danger">Could not load message.</p>'];
     }
 }
+
 
 }
