@@ -228,7 +228,7 @@ public function onRun()
 public function onViewMessage()
 {
     $uid = post('uid');
-    $folder = post('folder');
+    $folderName = post('folder');
 
     try {
         $identity = $this->getCurrentIdentity();
@@ -246,8 +246,14 @@ public function onViewMessage()
         ]);
         $client->connect();
 
-        $folderObj = $client->getFolder($folder);
-        $message = $folderObj->getMessage($uid);
+        $folder = $client->getFolder($folderName);
+
+        // Correct way to get a single message by UID
+        $message = $folder->messages()->uid($uid)->first();
+
+        if (!$message) {
+            throw new ApplicationException("Message not found.");
+        }
 
         return [
             '#message-view' => $this->renderPartial('webmail/messageView', [
@@ -259,4 +265,5 @@ public function onViewMessage()
         return ['#message-view' => '<p class="text-danger">Could not load message.</p>'];
     }
 }
+
 }
