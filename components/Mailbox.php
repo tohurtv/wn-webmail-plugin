@@ -3,17 +3,20 @@
 use Cms\Classes\ComponentBase;
 use Auth;
 use Tohur\WebMail\Classes\MailClient;
+use Tohur\WebMail\Models\Settings;
 use Exception;
 
-class Inbox extends ComponentBase
+class Mailbox extends ComponentBase
 {
     public $messages;
+    public $folders;
+    public $client;
 
     public function componentDetails()
     {
         return [
-            'name'        => 'Inbox',
-            'description' => 'Displays a list of recent emails from the inbox.'
+            'name'        => 'Mailbox',
+            'description' => 'Connects to IMAP and displays mailbox contents.'
         ];
     }
 
@@ -33,10 +36,10 @@ class Inbox extends ComponentBase
 
     public function onRun()
     {
-        $this->loadInbox();
+        $this->loadMailbox();
     }
 
-    protected function loadInbox()
+    protected function loadMailbox()
     {
         try {
             $user = Auth::getUser();
@@ -45,19 +48,25 @@ class Inbox extends ComponentBase
                 throw new Exception('User not authenticated.');
             }
 
-            // Replace these with real per-user credentials or a test account
+            // Get settings
+            $settings = Settings::instance();
+
+            // Use either per-user credentials or shared fallback
             $username = $user->email;
-            $password = $user->imap_password ?? 'test-password'; // update this logic
+            $password = $user->imap_password ?? $settings->smtp_password;
 
-            $client = new MailClient($username, $password);
-            $limit = (int) $this->property('limit');
+            $this->client = new MailClient($username, $password);
 
-            $this->messages = $client->getRecentMessages($limit);
+            $this->folders = $this->client->getFolders();
+            $this->messages = $this->client->getRecentMessages($this->property('limit'));
+
+            $this->page['messages'] = $this->messages;
+            $this->page['folders'] = $this->folders;
+
         } catch (Exception $e) {
-            \Log::error('[WebMail] Failed to load inbox: ' . $e->getMessage());
+            \Log::error('[WebMail] Mailbox load error: ' . $e->getMessage());
             $this->messages = collect();
+            $this->folders = collect();
         }
-
-        $this->page['messages'] = $this->messages;
     }
 }

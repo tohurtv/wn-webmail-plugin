@@ -46,7 +46,7 @@ class Plugin extends PluginBase
     public function registerComponents(): array
     {
         return [
-        \Tohur\WebMail\Components\Inbox::class => 'webMailInbox'
+        \Tohur\WebMail\Components\Mailbox::class => 'webMailMailbox'
     ];
     }
 

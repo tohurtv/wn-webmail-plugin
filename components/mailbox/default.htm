@@ -1,0 +1,23 @@
+<div class="row">
+    <div class="col-md-3">
+        <h5>Folders</h5>
+        <ul class="list-group">
+            {% for folder in folders %}
+                <li class="list-group-item">{{ folder.name }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="col-md-9">
+        <h5>Inbox</h5>
+        <ul class="list-group">
+            {% for msg in messages %}
+                <li class="list-group-item">
+                    <strong>{{ msg.from }}</strong> — {{ msg.subject }}
+                    <br><small>{{ msg.date }}</small>
+                </li>
+            {% else %}
+                <li class="list-group-item text-muted">No messages.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
