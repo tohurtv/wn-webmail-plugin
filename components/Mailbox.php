@@ -231,7 +231,7 @@ public function onViewMessage()
     $folderName = post('folder');
 
     \Log::info('Loading message UID: ' . $uid . ' from folder: ' . $folderName);
-    
+
     try {
         $identity = $this->getCurrentIdentity();
         if (!$identity) throw new ApplicationException("Session invalid.");
@@ -254,11 +254,13 @@ public function onViewMessage()
             throw new ApplicationException("Folder '{$folderName}' not found.");
         }
 
-        $message = $folder->messages()->uid($uid)->first();
+        $messages = $folder->messages()->uid($uid)->get();
 
-        if (!$message) {
-            throw new ApplicationException("Message with UID {$uid} not found in folder {$folderName}.");
-        }
+if ($messages->isEmpty()) {
+    throw new ApplicationException("Message with UID {$uid} not found in folder {$folderName}");
+}
+
+$message = $messages->first();
 
         return [
             '#message-view' => $this->renderPartial('webmail/messageView', [
