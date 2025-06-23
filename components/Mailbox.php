@@ -250,7 +250,7 @@ public function onLoadMessagesFromFolder()
         $client->connect();
 
         $folder = $client->getFolder($folderName);
-        $messages = $folder->query()->limit(20)->get(); // You can paginate, etc.
+        $messages = $folder->query()->all()->limit(20)->get();; // You can paginate, etc.
 
         return [
             '#message-list' => $this->renderPartial('webmail/messageList', [
