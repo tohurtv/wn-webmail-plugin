@@ -28,14 +28,22 @@ public function defineProperties()
             'title'       => 'Default Page After Login',
             'description' => 'Page to redirect to after successful login',
             'type'        => 'dropdown',
-            'options'     => function () {
-                return collect(\Cms\Classes\Page::listInTheme(\Cms\Classes\Theme::getActiveTheme()))
-                    ->pluck('baseFileName', 'baseFileName')
-                    ->toArray();
-            },
+            'options'     => $this->getCmsPageOptions(),
             'default'     => 'webmail/inbox',
         ]
     ];
+}
+
+protected function getCmsPageOptions()
+{
+    $pages = \Cms\Classes\Page::listInTheme(\Cms\Classes\Theme::getActiveTheme());
+
+    $options = [];
+    foreach ($pages as $page) {
+        $options[$page->baseFileName] = $page->baseFileName;
+    }
+
+    return $options;
 }
 
     public function onRun()
