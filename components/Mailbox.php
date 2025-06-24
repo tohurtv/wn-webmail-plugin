@@ -72,11 +72,11 @@ public function onRun()
     $currentPage = $this->page->baseFileName;
 
     if (!$this->checkSession() && $currentPage === $this->property('defaultPage')) {
-        return redirectToLogin();
+        return $this->redirectToLogin();
     }
 
     if ($this->checkSession() && $currentPage === $this->property('loginPage')) {
-        return redirectToDefault();
+        return $this->redirectToDefault();
     }
 
     // New logic for /mailbox/:folder?
@@ -85,7 +85,7 @@ public function onRun()
     try {
         $identity = $this->getCurrentIdentity();
         if (!$identity) {
-            return redirectToLogin();
+            return $this->redirectToLogin();
         }
 
         $settings = Settings::instance();
@@ -114,7 +114,7 @@ public function onRun()
     } catch (\Exception $e) {
         \Log::error("Error loading mailbox folder: " . $e->getMessage());
         \Flash::error("Failed to load folder: " . $folderParam);
-        return redirectToDefault();
+        return $this->redirectToDefault();
     }
 
     $this->page['folders'] = $this->listFolders();
@@ -133,7 +133,7 @@ public function getDateFormat() {
 
         try {
             $this->attemptLogin($email, $password);
-            return redirectToDefault();
+            return $this->redirectToDefault();
         } catch (\Exception $ex) {
             Flash::error('Login failed: ' . $ex->getMessage());
             return Redirect::back();
@@ -145,7 +145,7 @@ public function getDateFormat() {
         Session::forget('webmail_identity');
         Session::forget('webmail_password');
         Flash::success('You have been logged out.');
-        return redirectToLogin();
+        return $this->redirectToLogin();
     }
 
     protected function checkSession()
