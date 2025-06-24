@@ -62,11 +62,11 @@ public function onRun()
     $currentPage = $this->page->baseFileName;
 
     if (!$this->checkSession() && $currentPage === $this->property('defaultPage')) {
-        return Redirect::to(Page::url($this->property('loginPage')));
+        return Redirect::to($this->property('loginPage'));
     }
 
     if ($this->checkSession() && $currentPage === $this->property('loginPage')) {
-        return Redirect::to(Page::url($this->property('defaultPage')));
+        return Redirect::to($this->property('defaultPage'));
     }
 
     // New logic for /mailbox/:folder?
@@ -75,7 +75,7 @@ public function onRun()
     try {
         $identity = $this->getCurrentIdentity();
         if (!$identity) {
-            return Redirect::to(Page::url($this->property('loginPage')));
+            return Redirect::to($this->property('loginPage'));
         }
 
         $settings = Settings::instance();
@@ -104,7 +104,7 @@ public function onRun()
     } catch (\Exception $e) {
         \Log::error("Error loading mailbox folder: " . $e->getMessage());
         \Flash::error("Failed to load folder: " . $folderParam);
-        return Redirect::to(Page::url($this->property('defaultPage')));
+        return Redirect::to($this->property('defaultPage'));
     }
 
     $this->page['folders'] = $this->listFolders();
@@ -123,7 +123,7 @@ public function getDateFormat() {
 
         try {
             $this->attemptLogin($email, $password);
-            return Redirect::to(Page::url($this->property('defaultPage')));
+            return Redirect::to($this->property('defaultPage'));
         } catch (\Exception $ex) {
             Flash::error('Login failed: ' . $ex->getMessage());
             return Redirect::back();
@@ -135,7 +135,7 @@ public function getDateFormat() {
         Session::forget('webmail_identity');
         Session::forget('webmail_password');
         Flash::success('You have been logged out.');
-        return Redirect::to(Page::url($this->property('loginPage')));
+        return Redirect::to($this->property('loginPage'));
     }
 
     protected function checkSession()
