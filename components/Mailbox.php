@@ -110,6 +110,11 @@ public function onRun()
 }
 
 
+public function getDateFormat() {
+    // return your preferred date format string here
+    return 'F j, Y g:i A';
+}
+
     public function onLogin()
     {
         $email = post('email');
