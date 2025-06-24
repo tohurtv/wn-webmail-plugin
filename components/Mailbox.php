@@ -467,6 +467,7 @@ public function onDeleteMessage()
                 'folder'   => $folderName,
                 'sort'     => $sort,
                 'dateFormat' => $this->getDateFormat(),
+                'folders' => $this->listFolders(),
             ]),
             'delete_success' => true,  // <-- this key flags success
         ];
@@ -520,6 +521,7 @@ public function onMoveMessage()
                 'folder'   => $from,
                 'sort'     => $sort,
                 'dateFormat' => $this->getDateFormat(),
+                'folders' => $this->listFolders(),
             ]),
         ];
     } catch (\Exception $e) {
