@@ -458,21 +458,11 @@ if (!$message) {
 // Move message to Trash folder
 $message->move('Trash');
 
-// Refresh the folder after move
-$folder = $client->getFolder($folderName);
-
-// Reload messages with current folder and sort order
-$messages = $folder->query()->all()->limit(20)->get();
-
-// Apply sorting
-$messages = $sort === 'asc'
-    ? $messages->sortBy(fn($msg) => $msg->getDate())
-    : $messages->sortByDesc(fn($msg) => $msg->getDate());
-
+// Instead of re-querying messages manually, just reload the partial for the current folder:
 return [
     '#message-list' => $this->renderPartial('webmail/messageList', [
-        'messages' => $messages,
-        'folder'   => $folder->path,
+        'messages' => $client->getFolder($folderName)->query()->all()->limit(20)->get(),
+        'folder'   => $folderName,
         'sort'     => $sort,
         'dateFormat' => $this->getDateFormat(),
     ]),
