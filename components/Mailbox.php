@@ -456,12 +456,11 @@ if (!$message) {
 }
 
         // Move message to Trash folder
-        $trashFolder = $client->getFolder('Trash');
-        if (!$trashFolder) {
-            throw new \Exception('Trash folder not found');
-        }
-
-        $message->move($trashFolder);
+        $folderNames = $client->getFolders()->map(fn($f) => $f->path)->toArray();
+if (!in_array('Trash', $folderNames)) {
+    throw new \Exception('Trash folder not found');
+}
+$message->move('Trash');
 
         // Reload messages with current folder and sort order
         $messages = $folder->query()->all()->limit(20)->get();
