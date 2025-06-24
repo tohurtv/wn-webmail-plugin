@@ -432,7 +432,7 @@ public function onDeleteMessage()
 {
     $folderName = post('folder');
     $uid = post('uid');
-    $sort = post('sort', 'desc'); // default to desc
+    $sort = post('sort', 'desc');
 
     try {
         $identity = $this->getCurrentIdentity();
@@ -454,28 +454,28 @@ public function onDeleteMessage()
 
         $folder = $client->getFolder($folderName);
 
-// Find the message by UID
-$message = $folder->query()->getMessage($uid);
-if (!$message) {
-    throw new \Exception("Message with UID {$uid} not found");
-}
+        $message = $folder->query()->getMessage($uid);
+        if (!$message) {
+            throw new \Exception("Message with UID {$uid} not found");
+        }
 
-// Move message to Trash folder
-$message->move('Trash');
+        $message->move('Trash');
 
-// Instead of re-querying messages manually, just reload the partial for the current folder:
-return [
-    '#message-list' => $this->renderPartial('webmail/messageList', [
-        'messages' => $client->getFolder($folderName)->query()->all()->limit(20)->get(),
-        'folder'   => $folderName,
-        'sort'     => $sort,
-        'dateFormat' => $this->getDateFormat(),
-    ]),
-];
+        return [
+            '#message-list' => $this->renderPartial('webmail/messageList', [
+                'messages' => $client->getFolder($folderName)->query()->all()->limit(20)->get(),
+                'folder'   => $folderName,
+                'sort'     => $sort,
+                'dateFormat' => $this->getDateFormat(),
+            ]),
+            'delete_success' => true,  // <-- this key flags success
+        ];
+
     } catch (\Exception $e) {
         \Log::error('Failed to delete message: ' . $e->getMessage());
         return [
-            '#message-list' => '<div class="alert alert-danger">Failed to delete message.</div>'
+            '#message-list' => '<div class="alert alert-danger">Failed to delete message.</div>',
+            'delete_success' => false,
         ];
     }
 }
