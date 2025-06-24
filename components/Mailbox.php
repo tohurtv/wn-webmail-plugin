@@ -480,5 +480,54 @@ public function onDeleteMessage()
     }
 }
 
+public function onMoveMessage()
+{
+    $uid = post('uid');
+    $from = post('from');
+    $to = post('to');
+    $sort = post('sort', 'desc');
+
+    try {
+        $identity = $this->getCurrentIdentity();
+        if (!$identity) {
+            throw new \Exception('Missing identity');
+        }
+
+        $settings = Settings::instance();
+        $client = Client::make([
+            'host'          => $settings->imap_host,
+            'port'          => $settings->imap_port,
+            'encryption'    => $settings->imap_encryption,
+            'validate_cert' => true,
+            'username'      => $identity->imap_username,
+            'password'      => Session::get('webmail_password'),
+            'protocol'      => 'imap'
+        ]);
+        $client->connect();
+
+        $sourceFolder = $client->getFolder($from);
+        $message = $sourceFolder->query()->getMessage($uid);
+        $message->move($to);
+
+        $messages = $sourceFolder->query()->all()->limit(20)->get();
+        $messages = $sort === 'asc'
+            ? $messages->sortBy(fn($msg) => $msg->getDate())
+            : $messages->sortByDesc(fn($msg) => $msg->getDate());
+
+        return [
+            '#message-list' => $this->renderPartial('webmail/messageList', [
+                'messages' => $messages,
+                'folder'   => $from,
+                'sort'     => $sort,
+                'dateFormat' => $this->getDateFormat(),
+            ]),
+        ];
+    } catch (\Exception $e) {
+        \Log::error('Move failed: ' . $e->getMessage());
+        return [
+            '#message-list' => '<div class="alert alert-danger">Failed to move message.</div>'
+        ];
+    }
+}
 
 }
