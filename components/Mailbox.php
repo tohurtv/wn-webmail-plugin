@@ -449,31 +449,34 @@ public function onDeleteMessage()
 
         $folder = $client->getFolder($folderName);
 
-        // Find the message by UID
+// Find the message by UID
 $message = $folder->query()->getMessage($uid);
 if (!$message) {
     throw new \Exception("Message with UID {$uid} not found");
 }
 
-        // Move message to Trash folder
-        $message->move('Trash');
+// Move message to Trash folder
+$message->move('Trash');
 
-        // Reload messages with current folder and sort order
-        $messages = $folder->query()->all()->limit(20)->get();
+// Refresh the folder after move
+$folder = $client->getFolder($folderName);
 
-        // Apply sorting
-        $messages = $sort === 'asc'
-            ? $messages->sortBy(fn($msg) => $msg->getDate())
-            : $messages->sortByDesc(fn($msg) => $msg->getDate());
+// Reload messages with current folder and sort order
+$messages = $folder->query()->all()->limit(20)->get();
 
-        return [
-            '#message-list' => $this->renderPartial('webmail/messageList', [
-                'messages' => $messages,
-                'folder'   => $folder->path,
-                'sort'     => $sort,
-                'dateFormat' => $this->getDateFormat(), // optional helper method for format string
-            ]),
-        ];
+// Apply sorting
+$messages = $sort === 'asc'
+    ? $messages->sortBy(fn($msg) => $msg->getDate())
+    : $messages->sortByDesc(fn($msg) => $msg->getDate());
+
+return [
+    '#message-list' => $this->renderPartial('webmail/messageList', [
+        'messages' => $messages,
+        'folder'   => $folder->path,
+        'sort'     => $sort,
+        'dateFormat' => $this->getDateFormat(),
+    ]),
+];
     } catch (\Exception $e) {
         \Log::error('Failed to delete message: ' . $e->getMessage());
         return [
