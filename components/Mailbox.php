@@ -57,16 +57,26 @@ class Mailbox extends ComponentBase
         return $options;
     }
 
+    protected function redirectToLogin()
+{
+    return Redirect::to($this->controller->pageUrl($this->property('loginPage')));
+}
+
+protected function redirectToDefault()
+{
+    return Redirect::to($this->controller->pageUrl($this->property('defaultPage')));
+}
+
 public function onRun()
 {
     $currentPage = $this->page->baseFileName;
 
     if (!$this->checkSession() && $currentPage === $this->property('defaultPage')) {
-        return Redirect::to($this->property('loginPage'));
+        return redirectToLogin();
     }
 
     if ($this->checkSession() && $currentPage === $this->property('loginPage')) {
-        return Redirect::to($this->property('defaultPage'));
+        return redirectToDefault();
     }
 
     // New logic for /mailbox/:folder?
@@ -75,7 +85,7 @@ public function onRun()
     try {
         $identity = $this->getCurrentIdentity();
         if (!$identity) {
-            return Redirect::to($this->property('loginPage'));
+            return redirectToLogin();
         }
 
         $settings = Settings::instance();
@@ -104,7 +114,7 @@ public function onRun()
     } catch (\Exception $e) {
         \Log::error("Error loading mailbox folder: " . $e->getMessage());
         \Flash::error("Failed to load folder: " . $folderParam);
-        return Redirect::to($this->property('defaultPage'));
+        return redirectToDefault();
     }
 
     $this->page['folders'] = $this->listFolders();
@@ -123,7 +133,7 @@ public function getDateFormat() {
 
         try {
             $this->attemptLogin($email, $password);
-            return Redirect::to($this->property('defaultPage'));
+            return redirectToDefault();
         } catch (\Exception $ex) {
             Flash::error('Login failed: ' . $ex->getMessage());
             return Redirect::back();
@@ -135,7 +145,7 @@ public function getDateFormat() {
         Session::forget('webmail_identity');
         Session::forget('webmail_password');
         Flash::success('You have been logged out.');
-        return Redirect::to($this->property('loginPage'));
+        return redirectToLogin();
     }
 
     protected function checkSession()
