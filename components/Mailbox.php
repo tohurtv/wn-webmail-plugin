@@ -450,10 +450,10 @@ public function onDeleteMessage()
         $folder = $client->getFolder($folderName);
 
         // Find the message by UID
-        $message = $folder->getMessage($uid);
-        if (!$message) {
-            throw new \Exception('Message not found');
-        }
+$message = $folder->query()->getMessage($uid);
+if (!$message) {
+    throw new \Exception("Message with UID {$uid} not found");
+}
 
         // Move message to Trash folder
         $trashFolder = $client->getFolder('Trash');
