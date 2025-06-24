@@ -328,7 +328,8 @@ public function onLoadMessagesFromFolder()
             '#message-list' => $this->renderPartial('webmail/messageList', [
                 'messages' => $messages,
                 'folder'   => $folder->path,
-                'sort'     => $sortOrder // Pass current sort to partial
+                'sort'     => $sortOrder,
+                'folders' => $this->listFolders(),
             ])
         ];
     } catch (\Exception $e) {
