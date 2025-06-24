@@ -100,6 +100,7 @@ public function onRun()
         // Pass to the page/partials
         $this->page['folder'] = $folderParam;
         $this->page['messages'] = $messages;
+        $this->page['folders'] = $this->listFolders();
     } catch (\Exception $e) {
         \Log::error("Error loading mailbox folder: " . $e->getMessage());
         \Flash::error("Failed to load folder: " . $folderParam);
